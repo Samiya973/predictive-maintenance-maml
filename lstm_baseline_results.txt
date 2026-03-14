@@ -1,0 +1,26 @@
+============================================================
+LSTM BASELINE EVALUATION RESULTS
+============================================================
+
+Model: LSTM (128->64 units)
+Epochs: 35
+Parameters: 168,513
+
+Train Set:
+  RMSE: 11.4549 cycles
+  MAE:  8.5572 cycles
+  R2:   0.9301
+  NASA Score: 25415.39
+
+Validation Set:
+  RMSE: 12.9695 cycles
+  MAE:  9.3988 cycles
+  R2:   0.9107
+  NASA Score: 8797.55
+
+Test Set:
+  RMSE: 14.0399 cycles
+  MAE:  10.1899 cycles
+  R2:   0.8953
+  NASA Score: 10036.58
+
