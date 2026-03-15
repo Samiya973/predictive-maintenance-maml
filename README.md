@@ -127,6 +127,34 @@ Input: [batch=64, timesteps=30, features=102]
 Total parameters: 168,513
 ```
 
+## Random Forest Baseline
+```
+Input: (N, 30, 102)
+        ↓
+  extract_features()
+  mean(axis=1)  →  102 features
+  std(axis=1)   →  102 features
+  min(axis=1)   →  102 features
+  max(axis=1)   →  102 features
+        ↓
+Flat vector: (N, 408)
+        ↓
+  RandomForestRegressor(
+    n_estimators      = 200
+    max_depth         = 20
+    max_features      = 0.5
+    min_samples_leaf  = 2
+    n_jobs            = -1
+  )
+        ↓
+  clip(ŷ, 0, 130)
+        ↓
+RUL prediction ∈ [0, 130]
+
+Total trees    : 200
+Input features : 408  (102 × 4 statistics)
+```
+
 ### MAML Meta-Training Loop (Upcoming)
 
 ```
