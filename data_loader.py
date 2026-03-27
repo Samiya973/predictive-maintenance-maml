@@ -47,17 +47,24 @@ def load_preprocessed_data(data_file='data/processed/FD001_preprocessed.npz'):
     data = np.load(data_file, allow_pickle=True)
     
     data_dict = {
-        'X_train': data['X_train'],
-        'y_train': data['y_train'],
-        'train_engines': data['train_engines'],
-        'X_val': data['X_val'],
-        'y_val': data['y_val'],
-        'val_engines': data['val_engines'],
-        'X_test': data['X_test'],
-        'y_test': data['y_test'],
-        'test_engines': data['test_engines'],
-        'feature_names': data['feature_names']
-    }
+    'X_train': data['X_train'],
+    'y_train': data['y_train'],
+    'train_engines': data['train_engines'],
+    'train_engine_ids': data['train_engine_ids'],   # ← ADD
+
+    'X_val': data['X_val'],
+    'y_val': data['y_val'],
+    'val_engines': data['val_engines'],
+    'val_engine_ids': data['val_engine_ids'],       # ← ADD
+
+    'X_test': data['X_test'],
+    'y_test': data['y_test'],
+    'test_engines': data['test_engines'],
+    'test_engine_ids': data['test_engine_ids'], 
+    'max_rul': data['max_rul'],    # ← ADD
+
+    'feature_names': data['feature_names']
+}
     
     print(f"✓ Loaded preprocessed data")
     print(f"  Training: {len(data_dict['X_train'])} samples")
@@ -87,19 +94,19 @@ def create_dataloaders(data_dict, batch_size=64):
     train_dataset = CMAPSSDataset(
         data_dict['X_train'], 
         data_dict['y_train'],
-        data_dict['train_engines']
+        data_dict['train_engine_ids']
     )
     
     val_dataset = CMAPSSDataset(
         data_dict['X_val'], 
         data_dict['y_val'],
-        data_dict['val_engines']
+        data_dict['val_engine_ids']
     )
     
     test_dataset = CMAPSSDataset(
         data_dict['X_test'], 
         data_dict['y_test'],
-        data_dict['test_engines']
+        data_dict['test_engine_ids']
     )
     
     # Create dataloaders
