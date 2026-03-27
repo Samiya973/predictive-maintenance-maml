@@ -1,0 +1,8 @@
+MAML N-shot Results
+==============================
+K= 1-shot | RMSE: 15.9593 cycles
+K= 3-shot | RMSE: 12.4135 cycles
+K= 5-shot | RMSE: 12.1470 cycles
+K=10-shot | RMSE: 11.9790 cycles
+K=20-shot | RMSE: 11.6299 cycles
+K=50-shot | RMSE: 11.6219 cycles
