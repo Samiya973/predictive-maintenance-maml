@@ -1,0 +1,111 @@
+======================================================================
+  EARLY WARNING DETECTOR -- EVALUATION REPORT
+======================================================================
+  h=3.0000 drift_k=0.5 decay=0.95 warmup=30 healthy_ratio=0.8 engines=15
+  Engine-adaptive baseline: first 30 windows per engine
+
+----------------------------------------------------------------------
+  PRIMARY METRICS (Window-Level)
+----------------------------------------------------------------------
+  Total windows: 2,710
+
+  Window TPR       : 0.959  (target >= 0.90) [PASS]
+  Window FPR       : 0.116  (target <= 0.15) [PASS]
+  Window Precision : 0.583
+  Window F1        : 0.725  (target >= 0.70) [PASS]
+
+  Confusion Matrix (z=3.912):
+    TN= 2,052  FP=  268
+    FN=    16  TP=  374
+
+----------------------------------------------------------------------
+  SECONDARY METRICS (Engine-Level)
+----------------------------------------------------------------------
+  Detections > 90 cycles before onset = FP
+  Degraded engines : 15
+  Valid detections : 12
+  Too-early (FP)   : 3
+  Missed (FN)      : 0
+
+  Engine TPR  : 1.000  [PASS]
+  Engine FPR  : 1.000  [FAIL]
+  Engine Prec : 0.800
+  Engine F1   : 0.889  [PASS]
+
+----------------------------------------------------------------------
+  DETECTION LATENCY (existing engine metric)
+----------------------------------------------------------------------
+  Mean   : +34.1 (target +20..+55) [PASS]
+  Median : +33.5
+  Std    : 28.8
+  Range  : [-5, +85]
+  Early=11 Late=1 Exact=0
+  All latencies mean: +45.9
+
+----------------------------------------------------------------------
+  OPERATIONAL USEFULNESS (strict deployability view)
+----------------------------------------------------------------------
+  Actionable first alerts [0..90] : 11 / 15 (73.3%)
+  Too-early alerts  (>90)         : 3 / 15 (20.0%)
+  Late alerts       (<0)                         : 1 / 15 (6.7%)
+  Missed detections                              : 0 / 15 (0.0%)
+  Mean actionable lead time                     : +37.6
+  Median actionable lead time                   : +53.0
+
+----------------------------------------------------------------------
+  ALARM TRUST
+----------------------------------------------------------------------
+  First-alert precision                         : 0.733
+  False alarms per 100 healthy windows          : 0.60
+  Avg alarms per engine                         : 1.00
+  Avg pre-onset alarms / degraded engine        : 0.93
+
+----------------------------------------------------------------------
+  POLICY SENSITIVITY
+----------------------------------------------------------------------
+  max_valid_early= 55 | useful= 6 too_early= 8 late= 1 missed= 0 | Prec=0.400 Rec=0.400 F1=0.400
+  max_valid_early= 70 | useful=10 too_early= 4 late= 1 missed= 0 | Prec=0.667 Rec=0.667 F1=0.667
+  max_valid_early= 90 | useful=11 too_early= 3 late= 1 missed= 0 | Prec=0.733 Rec=0.733 F1=0.733
+  max_valid_early=100 | useful=14 too_early= 0 late= 1 missed= 0 | Prec=0.933 Rec=0.933 F1=0.933
+
+----------------------------------------------------------------------
+  ROC / PR
+----------------------------------------------------------------------
+  AUC=0.9785  [PASS]  Opt z=3.912 J=0.843
+  AP=0.8972  Best F1=0.8049 (z=7.937)
+
+----------------------------------------------------------------------
+  SEVERITY
+----------------------------------------------------------------------
+  HEALTHY   :  1,588 ( 58.6%)
+  MILD      :    256 (  9.4%)
+  MODERATE  :    148 (  5.5%)
+  SEVERE    :    718 ( 26.5%)
+
+----------------------------------------------------------------------
+  DIAGNOSIS
+----------------------------------------------------------------------
+  Eng   3 [TOO_EARLY] 91 cycles before onset
+    lat=+91 z@onset=14.930 cusum@onset=171.225
+    -> Check VAE generalization
+
+  Eng   9 [TOO_EARLY] 94 cycles before onset
+    lat=+94 z@onset=16.531 cusum@onset=197.585
+    -> Check VAE generalization
+
+  Eng  13 [TOO_EARLY] 94 cycles before onset
+    lat=+94 z@onset=16.035 cusum@onset=223.573
+    -> Check VAE generalization
+
+======================================================================
+  TARGET SUMMARY
+======================================================================
+  [PASS] Window TPR >= 0.90       = 0.959
+  [PASS] Window FPR <= 0.15       = 0.116
+  [PASS] Window F1  >= 0.70       = 0.725
+  [PASS] AUC-ROC    >= 0.85       = 0.978
+  [PASS] Engine TPR >= 0.85       = 1.000
+  [PASS] Engine F1  >= 0.75       = 0.889
+  [PASS] Latency +20..+55         = +34.1
+
+  Overall: ALL PASS
