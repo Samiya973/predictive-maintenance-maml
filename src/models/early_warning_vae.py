@@ -199,32 +199,114 @@ class ChangePointDetector:
                 return max(float(h), 3.0)
         return float(candidates[-1])
 
-def classify_severity(z_score):
+# def classify_severity(z_score):
+#     if z_score < 1.0:
+#         return {"level": "HEALTHY", "action": "No action required"}
+#     elif z_score < 2.0:
+#         return {"level": "MILD", "action": "Monitor closely"}
+#     elif z_score < 3.0:
+#         return {"level": "MODERATE", "action": "Schedule inspection"}
+#     else:
+#         return {"level": "SEVERE", "action": "Immediate intervention required"}
+def classify_severity(z_score, cusum, threshold_h, streak, confirm_cycles):
+    if streak >= confirm_cycles:
+        if z_score >= 3.0:
+            return {"level": "WARNING", "action": "Persistent severe anomaly"}
+        return {"level": "EARLY_WARNING", "action": "Persistent anomaly detected"}
+
+    if cusum > 0.5 * threshold_h:
+        return {"level": "MODERATE", "action": "Watch closely"}
+
     if z_score < 1.0:
         return {"level": "HEALTHY", "action": "No action required"}
-    elif z_score < 2.0:
-        return {"level": "MILD", "action": "Monitor closely"}
-    elif z_score < 3.0:
-        return {"level": "MODERATE", "action": "Schedule inspection"}
-    else:
-        return {"level": "SEVERE", "action": "Immediate intervention required"}
+
+    return {"level": "MILD", "action": "Monitor closely"}
+
+# class EarlyWarningSystem:
+#     def __init__(self, vae, baseline_mean, baseline_std,
+#                  drift_k=0.5, threshold_h=4.0, warmup=20,
+#                  decay=0.95, device="cpu"):
+#         self.vae = vae.to(device)
+#         self.vae.eval()
+#         self.device = device
+#         self.baseline_mean = float(baseline_mean)
+#         self.baseline_std = float(baseline_std)
+#         self.cpd = ChangePointDetector(
+#             baseline_mean=self.baseline_mean,
+#             baseline_std=self.baseline_std,
+#             drift_k=drift_k, threshold_h=threshold_h,
+#             warmup=warmup, decay=decay,
+#         )
+#         self.reset()
+
+#     def reset(self):
+#         self.cpd.reset()
+#         self.cycle_history = []
+#         self.error_history = []
+#         self.z_history = []
+#         self.cusum_history = []
+#         self.onset_detected = False
+#         self.onset_cycle = None
+
+#     def monitor(self, x, cycle):
+#         if x.dim() == 2:
+#             x = x.unsqueeze(0)
+#         x = x.to(self.device)
+#         error = float(self.vae.get_reconstruction_error(x)[0])
+#         det = self.cpd.update(error)
+
+#         self.cycle_history.append(cycle)
+#         self.error_history.append(error)
+#         self.z_history.append(det["z_score"])
+#         self.cusum_history.append(det["cusum"])
+
+#         if det["alarm"] and not self.onset_detected:
+#             self.onset_detected = True
+#             self.onset_cycle = cycle
+
+#         sev = classify_severity(det["z_score"])
+#         return {
+#             "cycle": cycle, "error": error,
+#             "z_score": det["z_score"], "cusum": det["cusum"],
+#             "alarm": det["alarm"],
+#             "severity": sev["level"], "action": sev["action"],
+#         }
+
+#     def get_detection_cycle(self):
+#         return self.onset_cycle
+
+#     def get_detection_latency(self, true_onset):
+#         if self.onset_cycle is None:
+#             return float("nan")
+#         return float(true_onset - self.onset_cycle)
 
 
 class EarlyWarningSystem:
     def __init__(self, vae, baseline_mean, baseline_std,
                  drift_k=0.5, threshold_h=4.0, warmup=20,
-                 decay=0.95, device="cpu"):
+                 decay=0.95, device="cpu",
+                 confirm_cycles=3,
+                 severe_z=3.0,
+                 moderate_z=2.0):
         self.vae = vae.to(device)
         self.vae.eval()
         self.device = device
         self.baseline_mean = float(baseline_mean)
         self.baseline_std = float(baseline_std)
+
         self.cpd = ChangePointDetector(
             baseline_mean=self.baseline_mean,
             baseline_std=self.baseline_std,
-            drift_k=drift_k, threshold_h=threshold_h,
-            warmup=warmup, decay=decay,
+            drift_k=drift_k,
+            threshold_h=threshold_h,
+            warmup=warmup,
+            decay=decay,
         )
+
+        self.confirm_cycles = int(confirm_cycles)
+        self.severe_z = float(severe_z)
+        self.moderate_z = float(moderate_z)
+
         self.reset()
 
     def reset(self):
@@ -233,12 +315,34 @@ class EarlyWarningSystem:
         self.error_history = []
         self.z_history = []
         self.cusum_history = []
+
         self.onset_detected = False
         self.onset_cycle = None
+
+        self.alarm_streak = 0
+        self.warning_streak = 0
+
+    def _classify_stage(self, z_score, cusum, alarm):
+        if not alarm:
+            if z_score < 1.0:
+                return "HEALTHY", "No action required"
+            elif z_score < self.moderate_z:
+                return "MILD", "Monitor closely"
+            else:
+                return "MODERATE", "Inspect trend"
+
+        if self.alarm_streak < self.confirm_cycles:
+            return "EARLY_WARNING", "Early anomaly detected — continue monitoring"
+
+        if z_score >= self.severe_z:
+            return "WARNING", "Persistent anomaly — schedule inspection"
+
+        return "WARNING", "Persistent anomaly — monitor and inspect"
 
     def monitor(self, x, cycle):
         if x.dim() == 2:
             x = x.unsqueeze(0)
+
         x = x.to(self.device)
         error = float(self.vae.get_reconstruction_error(x)[0])
         det = self.cpd.update(error)
@@ -248,16 +352,30 @@ class EarlyWarningSystem:
         self.z_history.append(det["z_score"])
         self.cusum_history.append(det["cusum"])
 
-        if det["alarm"] and not self.onset_detected:
+        if det["alarm"]:
+            self.alarm_streak += 1
+        else:
+            self.alarm_streak = 0
+
+        severity, action = self._classify_stage(
+            z_score=det["z_score"],
+            cusum=det["cusum"],
+            alarm=det["alarm"]
+        )
+
+        if (self.alarm_streak >= self.confirm_cycles) and (not self.onset_detected):
             self.onset_detected = True
             self.onset_cycle = cycle
 
-        sev = classify_severity(det["z_score"])
         return {
-            "cycle": cycle, "error": error,
-            "z_score": det["z_score"], "cusum": det["cusum"],
+            "cycle": cycle,
+            "error": error,
+            "z_score": det["z_score"],
+            "cusum": det["cusum"],
             "alarm": det["alarm"],
-            "severity": sev["level"], "action": sev["action"],
+            "alarm_streak": self.alarm_streak,
+            "severity": severity,
+            "action": action,
         }
 
     def get_detection_cycle(self):
@@ -267,7 +385,6 @@ class EarlyWarningSystem:
         if self.onset_cycle is None:
             return float("nan")
         return float(true_onset - self.onset_cycle)
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SMOKE TEST
